@@ -1,0 +1,336 @@
+
+
+.billing-shell {
+  min-height: 100vh;
+  color: #f8fafc;
+  background:
+    radial-gradient(circle at top left, rgba(245, 158, 11, 0.16), transparent 26%),
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.16), transparent 30%),
+    linear-gradient(180deg, #050816 0%, #091224 55%, #050816 100%);
+}
+
+.billing-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.billing-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(2, 6, 23, 0.72);
+  backdrop-filter: blur(12px);
+}
+
+.billing-header-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 18px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.billing-brand {
+  text-decoration: none;
+}
+
+.billing-brand-title {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  background: linear-gradient(90deg, #facc15, #34d399, #38bdf8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.billing-brand-subtitle {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.billing-nav {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.billing-nav a {
+  text-decoration: none;
+  color: #e5e7eb;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  font-weight: 600;
+  transition: 0.2s ease;
+}
+
+.billing-nav a:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.billing-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 24px;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(10px);
+}
+
+.billing-hero {
+  padding: 36px;
+  margin-bottom: 24px;
+}
+
+.billing-badge {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(250, 204, 21, 0.12);
+  border: 1px solid rgba(250, 204, 21, 0.18);
+  color: #fde68a;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.billing-title {
+  font-size: 50px;
+  line-height: 1.05;
+  font-weight: 900;
+  margin: 18px 0 14px;
+}
+
+.billing-title-gradient {
+  background: linear-gradient(90deg, #6ee7b7, #67e8f9, #fde68a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.billing-text {
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+.billing-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 26px;
+}
+
+.billing-btn {
+  display: inline-block;
+  text-decoration: none;
+  border-radius: 16px;
+  padding: 13px 20px;
+  font-weight: 700;
+  transition: 0.2s ease;
+}
+
+.billing-btn-primary {
+  background: linear-gradient(90deg, #10b981, #06b6d4);
+  color: white;
+  box-shadow: 0 10px 25px rgba(6, 182, 212, 0.18);
+}
+
+.billing-btn-secondary {
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.billing-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.billing-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.billing-section-card {
+  padding: 24px;
+}
+
+.billing-section-label {
+  color: #67e8f9;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.billing-section-title {
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0 0 8px;
+}
+
+.billing-form-wrap {
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.billing-form-card {
+  width: 100%;
+  max-width: 460px;
+  padding: 34px;
+}
+
+.billing-form-title {
+  text-align: center;
+  font-size: 34px;
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.billing-form-subtitle {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.62);
+  margin-bottom: 22px;
+}
+
+.billing-form-group {
+  margin-bottom: 16px;
+}
+
+.billing-label {
+  display: block;
+  margin-bottom: 8px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.billing-input {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #0c1328;
+  color: white;
+  padding: 14px 16px;
+  font-size: 15px;
+  outline: none;
+}
+
+.billing-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.billing-input:focus {
+  border-color: rgba(34, 211, 238, 0.45);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.16);
+}
+
+.billing-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.billing-table-wrap {
+  overflow: hidden;
+}
+
+.billing-table-scroll {
+  overflow-x: auto;
+}
+
+.billing-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.billing-table th,
+.billing-table td {
+  padding: 16px;
+  text-align: left;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.billing-table thead th {
+  border-top: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 14px;
+}
+
+.billing-pill-danger,
+.billing-pill-success {
+  display: inline-block;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.billing-pill-danger {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+}
+
+.billing-pill-success {
+  background: rgba(16, 185, 129, 0.18);
+  color: #6ee7b7;
+}
+
+.billing-page-title {
+  font-size: 38px;
+  font-weight: 900;
+  margin: 0 0 10px;
+}
+
+.billing-page-subtitle {
+  color: rgba(255, 255, 255, 0.66);
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .billing-grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .billing-title {
+    font-size: 36px;
+  }
+
+  .billing-container,
+  .billing-header-inner {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .billing-hero,
+  .billing-section-card,
+  .billing-form-card {
+    padding: 22px;
+  }
+}
+
+/* ❌ Remove number input arrows (Chrome, Edge, Safari) */
+.billing-input[type="number"]::-webkit-outer-spin-button,
+.billing-input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* ❌ Remove arrows (Firefox) */
+.billing-input[type="number"] {
+  -moz-appearance: textfield;
+}

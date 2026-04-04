@@ -2,10 +2,26 @@ import { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "./AppLayout";
 
-/** ✅ Keep Landing eager if you want fastest homepage */
+/** Keep Landing eager */
 import Landing from "./pages/Landing";
+<Route path="/" element={<Navigate to="/ajcomputers_billing" replace />} />
+import PlansPage from "./billing/pages/admin/PlansPage";
+import AdminChangePassword from "./billing/pages/admin/AdminChangePassword";
+import PortalChangePassword from "./billing/pages/portal/PortalChangePassword";
+import AdminProtectedRoute from "./billing/components/AdminProtectedRoute";
+import PortalProtectedRoute from "./billing/components/PortalProtectedRoute";
+import BillingLayout from "./billing/components/BillingLayout";
+import BillingHome from "./billing/pages/BillingHome";
+import AdminLogin from "./billing/pages/admin/AdminLogin";
+import AdminDashboard from "./billing/pages/admin/AdminDashboard";
+import CustomersPage from "./billing/pages/admin/CustomersPage";
+import NewCustomerPage from "./billing/pages/admin/NewCustomerPage";
+import EditCustomerPage from "./billing/pages/admin/EditCustomerPage";
+import PortalLogin from "./billing/pages/portal/PortalLogin";
+import PortalDashboard from "./billing/pages/portal/PortalDashboard";
+import ReminderSettings from "./billing/pages/admin/ReminderSettings";
 
-/** ✅ Lazy-load heavy pages (splits bundle into separate chunks) */
+/** Lazy-loaded DollarDex pages */
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Referral = lazy(() => import("./pages/Referral"));
 const NetworkDashboard = lazy(() => import("./pages/NetworkDashboard"));
@@ -44,25 +60,50 @@ export default function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
+        {/* DollarDex routes only */}
         <Route element={<AppLayout />}>
-          {/* Landing */}
           <Route path="/" element={<Landing />} />
 
-          {/* App group */}
           <Route path="/app">
             <Route index element={<Dashboard />} />
             <Route path="referral" element={<Referral />} />
             <Route path="network" element={<NetworkDashboard />} />
             <Route path="contract" element={<ContractPage />} />
             <Route path="about" element={<AboutPage />} />
-
-            {/* Safety redirect */}
             <Route path="dashboard" element={<Navigate to="/app" replace />} />
           </Route>
-
-          {/* Global 404 */}
-          <Route path="*" element={<NotFound />} />
         </Route>
+
+        {/* AJ Computers Billing routes */}
+        <Route path="/ajcomputers_billing" element={<BillingLayout />}>
+          <Route index element={<BillingHome />} />
+
+          {/* Admin login */}
+          <Route path="admin" element={<AdminLogin />} />
+
+          {/* Protected admin routes */}
+            <Route element={<AdminProtectedRoute />}>
+            <Route path="admin/dashboard" element={<AdminDashboard />} />
+            <Route path="admin/customers" element={<CustomersPage />} />
+            <Route path="admin/customers/new" element={<NewCustomerPage />} />
+            <Route path="admin/customers/:id/edit" element={<EditCustomerPage />} />
+            <Route path="admin/change-password" element={<AdminChangePassword />} />
+            <Route path="admin/plans" element={<PlansPage />} />
+	    <Route path="admin/reminders" element={<ReminderSettings />} />
+          </Route>
+
+          {/* Customer login */}
+          <Route path="portal/login" element={<PortalLogin />} />
+
+          {/* Protected customer routes */}
+          <Route element={<PortalProtectedRoute />}>
+            <Route path="portal/dashboard" element={<PortalDashboard />} />
+            <Route path="portal/change-password" element={<PortalChangePassword />} />
+          </Route>
+        </Route>
+
+        {/* Global 404 */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
   );

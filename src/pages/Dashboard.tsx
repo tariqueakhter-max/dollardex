@@ -1,17 +1,23 @@
 // src/pages/Dashboard.tsx
 // ============================================================================
-// DollarDex — Dashboard page (MOBILE POLISHED)
+// DollarDex — Dashboard page (MOBILE POLISHED + DASHBOARD POLISH PACK)
 // - DOES NOT render NavBar (AppLayout does)
 // - Layout: Deposit RIGHT of Live Contract Stats (desktop), stacks on mobile
 // - Mobile fixes: no overflow, grids stack, buttons/inputs full width on phone
 // - Gold per-second accrual ring (TOTAL: Capital + Auto Tier ROI)
 // - Wallet auto-sync (eth_accounts + chainId + listeners)
+// - Positions table: startTime-based 24h windows (timer never "sticks")
+// - ✅ Lock claim button visually when under 10 USDT
+// - ✅ “Claimable vs Accrued Today” split
+// - ✅ User-level ROI summary panel
+// - ✅ Auto-refresh indicator badge
+// - ✅ Per-position action buttons (UI convenience; contract claims are global)
 // ============================================================================
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { sendTxProtected } from "../wallet/tx";
 import { useLocation } from "react-router-dom";
 import { BrowserProvider, Contract, JsonRpcProvider, Interface, formatUnits, parseUnits } from "ethers";
+import { sendTxProtected } from "../wallet/tx";
 
 /** ========= Config ========= */
 const RPC_URLS = (
@@ -42,6 +48,7 @@ const BSC_NETWORK = { name: "bsc", chainId: BSC_CHAIN_ID_DEC } as const;
 // Lazy RPC with fallback (prevents “failed to detect network” + rate-limit crashes)
 let _rpc: JsonRpcProvider | null = null;
 let _rpcUrl: string | null = null;
+
 async function getRpc(): Promise<JsonRpcProvider> {
   if (_rpc) return _rpc;
 
@@ -95,11 +102,9 @@ function runLogsExclusive<T>(fn: () => Promise<T>): Promise<T> {
 function getEthereum(): any {
   return (window as any).ethereum;
 }
-
 function hasWallet() {
   return typeof (window as any).ethereum !== "undefined";
 }
-
 function normalizeChainId(cid: any): number | null {
   if (cid == null) return null;
   if (typeof cid === "string") {
@@ -112,7 +117,6 @@ function normalizeChainId(cid: any): number | null {
   if (typeof cid === "object" && cid) return normalizeChainId((cid as any).chainId);
   return null;
 }
-
 function timeAgo(tsSec: number) {
   const now = Math.floor(Date.now() / 1000);
   const d = Math.max(0, now - tsSec);
@@ -121,17 +125,14 @@ function timeAgo(tsSec: number) {
   if (d < 86400) return `${Math.floor(d / 3600)}h ago`;
   return `${Math.floor(d / 86400)}d ago`;
 }
-
 function scrollToId(id: string) {
   const el = document.getElementById(id);
   if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
 }
-
 function shortAddr(a: string) {
   if (!a) return "";
   return `${a.slice(0, 6)}…${a.slice(-4)}`;
 }
-
 function fmtCountdown(sec: number) {
   if (!Number.isFinite(sec) || sec <= 0) return "00:00:00";
   const h = Math.floor(sec / 3600);
@@ -139,22 +140,18 @@ function fmtCountdown(sec: number) {
   const s = Math.floor(sec % 60);
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
-
 function clamp01(x: number) {
   return Math.max(0, Math.min(1, x));
 }
-
 function pctFromBps(bps: bigint, divider: bigint) {
   if (divider === 0n) return 0;
   return Number((bps * 10_000n) / divider) / 100;
 }
-
 function safePct(numer: bigint, denom: bigint) {
   if (denom <= 0n) return 0;
   const p = (numer * 10_000n) / denom;
   return Number(p) / 100;
 }
-
 function formatFixed(value: bigint, decimals: number, dp: number) {
   const s = formatUnits(value, decimals); // string
   const [i, f = ""] = s.split(".");
@@ -162,7 +159,6 @@ function formatFixed(value: bigint, decimals: number, dp: number) {
   const intWithSep = i.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   return dp > 0 ? `${intWithSep}.${frac}` : intWithSep;
 }
-
 const fmt2 = (v: bigint, dec: number) => formatFixed(v, dec, 2);
 const fmt4 = (v: bigint, dec: number) => formatFixed(v, dec, 4);
 
@@ -873,6 +869,13 @@ export default function Dashboard() {
 
   const [yfRead, setYfRead] = useState<Contract | null>(null);
 
+  // ✅ Auto-refresh indicator
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number>(0);
+
+  // ✅ Per-position busy state (UI convenience)
+  const [posActionBusy, setPosActionBusy] = useState<number | null>(null);
+
   useEffect(() => {
     (async () => {
       try {
@@ -901,6 +904,7 @@ export default function Dashboard() {
   }
 
   async function refreshAll() {
+    setIsRefreshing(true);
     try {
       const c = yfRead;
       if (!c) return;
@@ -981,7 +985,6 @@ export default function Dashboard() {
         setMyTotalWithdrawn(u[6]);
 
         const [dR, nR, count] = await Promise.all([c.getDailyRewards(addr), c.getNetworkRewards(addr), c.getPositionCount(addr)]);
-
         setDailyAvail(dR[0]);
         setDailyReserve(dR[1]);
         setNetAvail(nR[0]);
@@ -1018,16 +1021,14 @@ export default function Dashboard() {
         setNetReserve(0n);
         setPositions([]);
       }
+
+      setLastUpdatedAt(Date.now());
     } catch (e: any) {
       console.error(e);
-      const msg =
-        e?.shortMessage ||
-        e?.info?.error?.message ||
-        e?.reason ||
-        e?.message ||
-        "Try again.";
-
+      const msg = e?.shortMessage || e?.info?.error?.message || e?.reason || e?.message || "Try again.";
       toast("error", "Failed to load on-chain data", String(msg).slice(0, 140));
+    } finally {
+      setIsRefreshing(false);
     }
   }
 
@@ -1083,13 +1084,7 @@ export default function Dashboard() {
     if (allowance < amount) {
       const ercW = await usdtWrite();
       await runTx("Approve USDT", () =>
-        sendTxProtected(
-          ercW,
-          "approve",
-          [CONTRACT_ADDRESS, amount],
-          {},
-          { preflight: true, gasBuffer: 1.15, fallbackGasLimit: 120_000n }
-        )
+        sendTxProtected(ercW, "approve", [CONTRACT_ADDRESS, amount], {}, { preflight: true, gasBuffer: 1.15, fallbackGasLimit: 120_000n })
       );
     }
 
@@ -1190,6 +1185,26 @@ export default function Dashboard() {
     setNetActionAmount("");
   }
 
+  // ✅ Per-position UI convenience (ABI is global claim/compound)
+  async function posClaimDaily(posIndex: number) {
+    if (posActionBusy !== null) return;
+    setPosActionBusy(posIndex);
+    try {
+      await onClaimDaily();
+    } finally {
+      setPosActionBusy(null);
+    }
+  }
+  async function posCompoundDaily(posIndex: number) {
+    if (posActionBusy !== null) return;
+    setPosActionBusy(posIndex);
+    try {
+      await onCompoundDaily();
+    } finally {
+      setPosActionBusy(null);
+    }
+  }
+
   /** ===== Next daily unlock timer (pink ring) ===== */
   const nextDailyUnlockSec = useMemo(() => {
     const active = positions.filter((p) => p.active && now < p.endTime);
@@ -1245,69 +1260,67 @@ export default function Dashboard() {
   const reasonMinClaim = `Min claim ${minWithdraw ? `${formatUnits(minWithdraw, dec)} ${sym}` : ""}`.trim();
   const reasonMaxPos = "Max positions reached";
 
-  // ✅ FIX 1: dailyDisabledReason existed in UI but missing in code → added
+  // ✅ Visual lock threshold (independent of contract MINIMUM_WITHDRAW)
+  const CLAIM_VISUAL_MIN = 10; // USDT
+  const claimVisualMinWei = useMemo(() => {
+    try {
+      return parseUnits(String(CLAIM_VISUAL_MIN), dec);
+    } catch {
+      return 0n;
+    }
+  }, [dec]);
+
+  // ✅ Claimable vs Accrued Today split
+  const claimableNow = useMemo(() => dailyAvail + netAvail, [dailyAvail, netAvail]);
+  const accruedToday = useMemo(() => {
+    const d = new Date(now * 1000);
+    const secondsToday = d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds();
+    const pct = Math.max(0, Math.min(1, secondsToday / 86400));
+    const bps = BigInt(Math.round(pct * 10_000));
+    return (totalDailyProjection * bps) / 10_000n;
+  }, [now, totalDailyProjection]);
+
+  // ✅ Claim Daily button reason
   const dailyDisabledReason =
-    !addr
-      ? reasonNeedWallet
-      : !chainOk
-        ? reasonWrongNet
-        : !registered
-          ? reasonNeedRegister
-          : dailyAvail <= 0n
-            ? reasonNoRewards
-            : (minWithdraw > 0n && dailyAvail < minWithdraw)
-              ? reasonMinClaim
-              : "";
+    !addr ? reasonNeedWallet :
+    !chainOk ? reasonWrongNet :
+    !registered ? reasonNeedRegister :
+    dailyAvail <= 0n ? reasonNoRewards :
+    dailyAvail < claimVisualMinWei ? `Locked until ≥ ${CLAIM_VISUAL_MIN} ${sym}` :
+    (minWithdraw > 0n && dailyAvail < minWithdraw) ? reasonMinClaim :
+    "";
+
+  // ✅ Claim Network button reason
+  const netDisabledReason =
+    !addr ? reasonNeedWallet :
+    !chainOk ? reasonWrongNet :
+    !registered ? reasonNeedRegister :
+    netAvail <= 0n ? reasonNoRewards :
+    netAvail < claimVisualMinWei ? `Locked until ≥ ${CLAIM_VISUAL_MIN} ${sym}` :
+    (minWithdraw > 0n && netAvail < minWithdraw) ? reasonMinClaim :
+    "";
 
   const dailyCompoundDisabledReason =
-    !addr
-      ? reasonNeedWallet
-      : !chainOk
-        ? reasonWrongNet
-        : !registered
-          ? reasonNeedRegister
-          : dailyAvail <= 0n
-            ? reasonNoRewards
-            : dailyAvail < minDeposit
-              ? `Min compound ${formatUnits(minDeposit, dec)} ${sym}`
-              : positions.length >= Number(maxPositions)
-                ? reasonMaxPos
-                : "";
+    !addr ? reasonNeedWallet :
+    !chainOk ? reasonWrongNet :
+    !registered ? reasonNeedRegister :
+    dailyAvail <= 0n ? reasonNoRewards :
+    dailyAvail < minDeposit ? `Min compound ${formatUnits(minDeposit, dec)} ${sym}` :
+    positions.length >= Number(maxPositions) ? reasonMaxPos :
+    "";
 
-  // ✅ FIX 2: netDisabledReason used but missing in your pasted file → added
-  const netDisabledReason =
-    !addr
-      ? reasonNeedWallet
-      : !chainOk
-        ? reasonWrongNet
-        : !registered
-          ? reasonNeedRegister
-          : netAvail <= 0n
-            ? reasonNoRewards
-            : (minWithdraw > 0n && netAvail < minWithdraw)
-              ? reasonMinClaim
-              : "";
-
-  // ✅ FIX 3: netCompoundDisabledReason for tooltips + correct minimum deposit logic
   const netCompoundDisabledReason =
-    !addr
-      ? reasonNeedWallet
-      : !chainOk
-        ? reasonWrongNet
-        : !registered
-          ? reasonNeedRegister
-          : netAvail <= 0n
-            ? reasonNoRewards
-            : netAvail < minDeposit
-              ? `Min compound ${formatUnits(minDeposit, dec)} ${sym}`
-              : positions.length >= Number(maxPositions)
-                ? reasonMaxPos
-                : "";
+    !addr ? reasonNeedWallet :
+    !chainOk ? reasonWrongNet :
+    !registered ? reasonNeedRegister :
+    netAvail <= 0n ? reasonNoRewards :
+    netAvail < minDeposit ? `Min compound ${formatUnits(minDeposit, dec)} ${sym}` :
+    positions.length >= Number(maxPositions) ? reasonMaxPos :
+    "";
 
   const liveActive = Boolean(addr && registered && chainOk);
 
   const activePositionsCount = useMemo(() => positions.filter((p) => p.active && now < p.endTime).length, [positions, now]);
-
   const positionsEarnedSum = useMemo(() => positions.reduce((s, p) => s + p.earned, 0n), [positions]);
   const positionsExpectedSum = useMemo(() => positions.reduce((s, p) => s + p.expected, 0n), [positions]);
   const positionsAmountSum = useMemo(() => positions.reduce((s, p) => s + p.amount, 0n), [positions]);
@@ -1383,11 +1396,6 @@ export default function Dashboard() {
               0% { transform: translateY(0); filter: drop-shadow(0 0 0 rgba(255,88,198,0)); }
               45% { transform: translateY(-1px); filter: drop-shadow(0 0 16px rgba(255,88,198,.18)); }
               100% { transform: translateY(0); filter: drop-shadow(0 0 0 rgba(255,88,198,0)); }
-            }
-
-            @keyframes ddxSheen {
-              0% { background-position: 0% 50%; }
-              100% { background-position: 100% 50%; }
             }
 
             .ddx-topbar {
@@ -1491,6 +1499,20 @@ export default function Dashboard() {
               input{ width: 100% !important; }
               .btn{ width: 100%; justify-content: center; }
             }
+
+            /* ✅ Locked pill + subtle locked look */
+            .ddx-lockPill{
+              display:inline-flex;
+              align-items:center;
+              gap:8px;
+              padding:6px 10px;
+              border-radius:999px;
+              border:1px solid rgba(255,140,225,.20);
+              background:rgba(255,88,198,.08);
+              color:rgba(255,255,255,.82);
+              font-size:12px;
+              font-weight:900;
+            }
           `}
         </style>
 
@@ -1529,6 +1551,17 @@ export default function Dashboard() {
                     </svg>
                     Official
                   </a>
+
+                  {/* ✅ Auto-refresh badge */}
+                  <span className="chip" title="Auto refresh every 30s">
+                    <span className="dot" style={{ opacity: isRefreshing ? 1 : 0.5 }} />
+                    <span className="mono">{isRefreshing ? "Refreshing…" : "Updated"}</span>
+                    {lastUpdatedAt ? (
+                      <span className="mono" style={{ opacity: 0.8 }}>
+                        {new Date(lastUpdatedAt).toLocaleTimeString()}
+                      </span>
+                    ) : null}
+                  </span>
 
                   {!addr ? (
                     <button
@@ -1745,14 +1778,36 @@ export default function Dashboard() {
                     value={<span>{formatUnits(myActiveDeposit, dec)} {sym}</span>}
                     hint={`${mySharePct.toFixed(4)}% share`}
                   />
+
+                  {/* ✅ ROI summary panel */}
+                  <div className="card" style={{ padding: 12 }}>
+                    <div className="small" style={{ letterSpacing: ".22em", textTransform: "uppercase" }}>ROI Summary</div>
+                    <div style={{ display: "grid", gap: 10, marginTop: 10 }}>
+                      <StatRow
+                        label="Tier"
+                        value={<span>Tier {tierIndex + 1}</span>}
+                        hint={roiThresholds?.[tierIndex] ? `≥ ${formatUnits(roiThresholds[tierIndex], dec)} ${sym}` : undefined}
+                      />
+                      <StatRow label="Base daily %" value={prettyCapitalDaily} />
+                      <StatRow label="Tier daily %" value={`${pctFromBps(tierDailyPct, divider).toFixed(2)}%`} />
+                      <StatRow
+                        label="Total daily projection"
+                        value={<span>{formatUnits(totalDailyProjection, dec)} {sym}</span>}
+                        hint="Capital + Tier"
+                      />
+                    </div>
+                  </div>
+
                   <StatRow label="Total deposited" value={<span>{formatUnits(myTotalDeposit, dec)} {sym}</span>} />
                   <StatRow label="Total withdrawn" value={<span>{formatUnits(myTotalWithdrawn, dec)} {sym}</span>} />
-                  <StatRow
-                    label="Total rewards available"
-                    value={<span>{formatUnits(myTotalRewardsAvailable, dec)} {sym}</span>}
-                    hint="Daily + Network"
-                  />
+                  <StatRow label="Total rewards available" value={<span>{formatUnits(myTotalRewardsAvailable, dec)} {sym}</span>} hint="Daily + Network" />
+
+                  {/* ✅ Claimable vs Accrued Today split */}
+                  <StatRow label="Claimable now" value={<span>{formatUnits(claimableNow, dec)} {sym}</span>} hint="Daily + Network" />
+                  <StatRow label="Accrued today" value={<span>{formatUnits(accruedToday, dec)} {sym}</span>} hint="Projection" />
+
                   <StatRow label="Base daily projection" value={<span>{formatUnits(baseDailyProjection, dec)} {sym}</span>} hint="capital only" />
+
                   <div style={{ height: 2 }} />
                   <StatRow label="Active positions" value={activePositionsCount} hint={`${slotsUsedPct.toFixed(1)}% slots used`} />
                   <div>
@@ -1762,7 +1817,8 @@ export default function Dashboard() {
                     <ProgressBar pct={myProgressPct} />
                     <div className="small" style={{ marginTop: 8 }}>
                       Earned{" "}
-                      <b style={{ color: "var(--text)" as any }}>{formatUnits(positionsEarnedSum, dec)} {sym}</b> · Expected{" "}
+                      <b style={{ color: "var(--text)" as any }}>{formatUnits(positionsEarnedSum, dec)} {sym}</b>{" "}
+                      · Expected{" "}
                       <b style={{ color: "var(--text)" as any }}>{formatUnits(positionsExpectedSum, dec)} {sym}</b>
                     </div>
                   </div>
@@ -1780,15 +1836,7 @@ export default function Dashboard() {
               <h3 style={{ margin: 0 }}>Daily Rewards</h3>
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 {addr && registered && chainOk && myActiveDeposit > 0n ? (
-                  <GoldAccrualRing
-                    label="Today"
-                    nowSec={now}
-                    dailyAmount={totalDailyProjection}
-                    decimals={dec}
-                    symbol={sym}
-                    size={44}
-                    stroke={6}
-                  />
+                  <GoldAccrualRing label="Today" nowSec={now} dailyAmount={totalDailyProjection} decimals={dec} symbol={sym} size={44} stroke={6} />
                 ) : null}
                 <LivePill active={liveActive} />
               </div>
@@ -1801,7 +1849,8 @@ export default function Dashboard() {
               {formatUnits(smoothDaily, dec)} {sym}
             </div>
             <div className="small" style={{ marginTop: 8 }}>
-              Reserve included: <b style={{ color: "var(--text)" as any }}>{formatUnits(dailyReserve, dec)} {sym}</b>
+              Reserve included:{" "}
+              <b style={{ color: "var(--text)" as any }}>{formatUnits(dailyReserve, dec)} {sym}</b>
             </div>
 
             <div style={{ height: 14 }} />
@@ -1829,7 +1878,14 @@ export default function Dashboard() {
               <ActionButton
                 label="Claim Daily"
                 onClick={onClaimDaily}
-                disabled={!addr || !registered || !chainOk || dailyAvail <= 0n || (minWithdraw > 0n && dailyAvail < minWithdraw)}
+                disabled={
+                  !addr ||
+                  !registered ||
+                  !chainOk ||
+                  dailyAvail <= 0n ||
+                  dailyAvail < claimVisualMinWei ||
+                  (minWithdraw > 0n && dailyAvail < minWithdraw)
+                }
                 disabledReason={dailyDisabledReason}
               />
 
@@ -1841,12 +1897,19 @@ export default function Dashboard() {
                   !registered ||
                   !chainOk ||
                   dailyAvail <= 0n ||
-                  dailyAvail < minDeposit || // ✅ compound uses MINIMUM_DEPOSIT
+                  dailyAvail < minDeposit ||
                   positions.length >= Number(maxPositions)
                 }
                 disabledReason={dailyCompoundDisabledReason}
               />
             </div>
+
+            {/* ✅ Visual lock hint */}
+            {addr && registered && chainOk && dailyAvail > 0n && dailyAvail < claimVisualMinWei ? (
+              <div className="ddx-lockPill" style={{ marginTop: 10 }}>
+                🔒 Locked under {CLAIM_VISUAL_MIN} {sym}
+              </div>
+            ) : null}
           </div>
 
           {/* NETWORK */}
@@ -1863,7 +1926,8 @@ export default function Dashboard() {
               {formatUnits(smoothNet, dec)} {sym}
             </div>
             <div className="small" style={{ marginTop: 8 }}>
-              Reserve included: <b style={{ color: "var(--text)" as any }}>{formatUnits(netReserve, dec)} {sym}</b>
+              Reserve included:{" "}
+              <b style={{ color: "var(--text)" as any }}>{formatUnits(netReserve, dec)} {sym}</b>
             </div>
 
             <div style={{ height: 14 }} />
@@ -1877,25 +1941,30 @@ export default function Dashboard() {
               <ActionButton
                 label="Claim Network"
                 onClick={onClaimNetwork}
-                disabled={!addr || !registered || !chainOk || netAvail <= 0n || (minWithdraw > 0n && netAvail < minWithdraw)}
-                disabledReason={netDisabledReason}
-              />
-
-              {/* ✅ FIX: Compound Network must use MINIMUM_DEPOSIT (not MINIMUM_WITHDRAW) */}
-              <ActionButton
-                label="Compound Network"
-                onClick={onCompoundNetwork}
                 disabled={
                   !addr ||
                   !registered ||
                   !chainOk ||
                   netAvail <= 0n ||
-                  netAvail < minDeposit ||
-                  positions.length >= Number(maxPositions)
+                  netAvail < claimVisualMinWei ||
+                  (minWithdraw > 0n && netAvail < minWithdraw)
                 }
+                disabledReason={netDisabledReason}
+              />
+              <ActionButton
+                label="Compound Network"
+                onClick={onCompoundNetwork}
+                disabled={!addr || !registered || !chainOk || netAvail <= 0n || netAvail < minDeposit || positions.length >= Number(maxPositions)}
                 disabledReason={netCompoundDisabledReason}
               />
             </div>
+
+            {/* ✅ Visual lock hint */}
+            {addr && registered && chainOk && netAvail > 0n && netAvail < claimVisualMinWei ? (
+              <div className="ddx-lockPill" style={{ marginTop: 10 }}>
+                🔒 Locked under {CLAIM_VISUAL_MIN} {sym}
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -1921,23 +1990,26 @@ export default function Dashboard() {
                     <th>Expected</th>
                     <th>Next Unlock</th>
                     <th>Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {positions.map((p) => {
-                    const stepSec = BigInt(Number(timeStep || 86400n));
-                    const stepNum = Number(stepSec);
-
-                    const checkpoint = Number((p.lastCheckpoint ?? (p as any).checkpoint ?? p.startTime) as any);
-
                     const nowSec = now;
-                    const effectiveNow = Math.min(nowSec, p.endTime);
+                    const active = p.active && nowSec < p.endTime;
 
-                    const windowStart = checkpoint;
+                    // ✅ startTime-based 24h windows => timer never sticks
+                    const stepNum = Number(timeStep || 86400n);
+                    const stepSec = BigInt(stepNum);
+
+                    const effectiveNow = Math.min(nowSec, p.endTime);
+                    const elapsed = Math.max(0, effectiveNow - p.startTime);
+                    const daysPassed = Math.floor(elapsed / stepNum);
+
+                    const windowStart = p.startTime + daysPassed * stepNum;
                     const nextUnlock = windowStart + stepNum;
 
                     const rem = Math.max(0, nextUnlock - nowSec);
-                    const active = p.active && nowSec < p.endTime;
 
                     // 🟣 24h progress %
                     const progressedSeconds = BigInt(active ? Math.max(0, stepNum - rem) : 0);
@@ -1970,6 +2042,7 @@ export default function Dashboard() {
 
                         <td>
                           <span className="chip mono">{rem === 0 ? "Ready" : fmtCountdown(rem)}</span>
+
                           <span
                             className="chip mono"
                             style={{
@@ -1991,6 +2064,52 @@ export default function Dashboard() {
                             />
                             {active ? "Active" : "Ended"}
                           </span>
+                        </td>
+
+                        <td>
+                          {active ? (
+                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                              <button
+                                className="btn"
+                                type="button"
+                                disabled={
+                                  !addr ||
+                                  !registered ||
+                                  !chainOk ||
+                                  dailyAvail <= 0n ||
+                                  dailyAvail < claimVisualMinWei ||
+                                  (minWithdraw > 0n && dailyAvail < minWithdraw) ||
+                                  posActionBusy === p.index
+                                }
+                                onClick={() => posClaimDaily(p.index)}
+                                title="Claims Daily rewards (contract claims globally)"
+                                style={{ fontWeight: 950 }}
+                              >
+                                {posActionBusy === p.index ? "Claiming…" : "Claim Daily"}
+                              </button>
+
+                              <button
+                                className="btn"
+                                type="button"
+                                disabled={
+                                  !addr ||
+                                  !registered ||
+                                  !chainOk ||
+                                  dailyAvail <= 0n ||
+                                  dailyAvail < minDeposit ||
+                                  positions.length >= Number(maxPositions) ||
+                                  posActionBusy === p.index
+                                }
+                                onClick={() => posCompoundDaily(p.index)}
+                                title="Compounds Daily rewards into a new position (global)"
+                                style={{ fontWeight: 950 }}
+                              >
+                                {posActionBusy === p.index ? "Compounding…" : "Compound"}
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="small">—</span>
+                          )}
                         </td>
                       </tr>
                     );
