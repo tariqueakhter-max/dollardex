@@ -457,19 +457,19 @@ const due = toNumber(c.totalDueAmount, 0);
         if (!hasRenewal) {
           if (filter === "EXPIRED" || filter === "EXPIRING") return false;
         }
+const status = hasRenewal
+  ? getStatus(c.renewalDate)
+  : "not_renewed";
+const days = hasRenewal
+  ? getDaysRemaining(c.renewalDate)
+  : null;
 
-        const status = hasRenewal
-          ? getStatus(c.renewalDate, c.planValidity)
-          : "NOT_RENEWED";
+if (filter === "EXPIRED") return status === "expired";
 
-        const days = hasRenewal
-          ? getDaysRemaining(c.renewalDate, c.planValidity)
-          : null;
-
-        if (filter === "EXPIRED") return status === "EXPIRED";
-        if (filter === "EXPIRING") {
-          return status !== "EXPIRED" && days !== null && days >= 0 && days <= 7;
-        }
+if (filter === "EXPIRING") {
+  return status !== "expired" && days !== null && days >= 0 && days <= 7;
+}
+        
         if (filter === "DUE") return due > 0;
         return true;
       })
@@ -601,8 +601,9 @@ async function handleConfirmAddDue() {
   }
 
   try {
-    setLoadingId(dueCustomer.id);
-
+if (!dueCustomer.id) return;
+if (!payCustomer || !payCustomer.id) return;
+if (!payCustomer || !payCustomer.id) return;
     // ✅ GET LATEST FROM DB
     const { data } = await supabase
       .from("billing_customers")
@@ -642,8 +643,8 @@ async function handleConfirmPay() {
   }
 
   try {
-    setLoadingId(payCustomer.id);
-
+if (!payCustomer || !payCustomer.id) return;
+if (!payCustomer || !payCustomer.id) return;
     // ✅ GET LATEST FROM DB
     const { data } = await supabase
       .from("billing_customers")
@@ -696,8 +697,8 @@ async function handleConfirmPay() {
     }
 
     try {
-      setLoadingId(renewCustomerData.id);
-
+if (!payCustomer || !payCustomer.id) return;
+if (!payCustomer || !payCustomer.id) return;
       let customerForRenew = renewCustomerData;
 
       const planChanged =
@@ -707,7 +708,8 @@ async function handleConfirmPay() {
         (renewCustomerData.planName || "") !== (selectedRenewPlan.name || "");
 
       if (planChanged) {
-        customerForRenew = await updateCustomer(renewCustomerData.id, {
+        customerForRenew = await updateCustomer({
+        id: renewCustomerData.id,
           ...renewCustomerData,
           planId: selectedRenewPlan.id,
           planName: selectedRenewPlan.name,
@@ -716,14 +718,11 @@ async function handleConfirmPay() {
         });
       }
 
+      if (!customerForRenew.id) return;
       await renewCustomer(customerForRenew.id, {
-renewalDate: getNextRenewalDate({
-  renewalDate: customerForRenew.renewalDate,
-  planValidity: selectedPlanValidity,
-}),
-
-        receivedAmount,
-        paymentDate: receivedAmount > 0 ? formatDateForStorage(new Date()) : undefined,
+      renewalDate: getNextRenewalDate(customerForRenew),
+      receivedAmount,
+      paymentDate: receivedAmount > 0 ? formatDateForStorage(new Date()) : undefined,
       });
 
 // ✅ CREATE INVOICE AFTER RENEW
@@ -735,7 +734,7 @@ const { data } = await supabase
 
 const newTotalDue = toNumber(data?.total_due_amount, 0);
 await createInvoice({
-  customer_id: renewCustomerData.id,
+customer_id: renewCustomerData.id || "",
   plan_id: selectedRenewPlan.id,
   amount: selectedPlanAmount,
 due_before: newTotalDue - selectedPlanAmount,
@@ -945,10 +944,10 @@ const payPreview = useMemo(() => {
                 paginatedCustomers.map((c) => {
                   const hasRenewal = !!c.renewalDate;
                   const status = hasRenewal
-                    ? getStatus(c.renewalDate, c.planValidity)
-                    : "NOT_RENEWED";
+                    ? getStatus(c.renewalDate)
+                    : "not_renewed";
                   const days = hasRenewal
-                    ? getDaysRemaining(c.renewalDate, c.planValidity)
+                    ? getDaysRemaining(c.renewalDate)
                     : null;
 const due = toNumber(c.totalDueAmount, 0);
                   const expiryDate = hasRenewal
@@ -957,7 +956,7 @@ const due = toNumber(c.totalDueAmount, 0);
 
                   let rowBg = "rgba(2, 6, 23, 0.10)";
                   if (!hasRenewal) rowBg = "rgba(148, 163, 184, 0.08)";
-                  else if (status === "EXPIRED") rowBg = "rgba(239, 68, 68, 0.12)";
+                  else if (status === "expired") rowBg = "rgba(239, 68, 68, 0.12)";
                   else if (due > 0) rowBg = "rgba(217, 70, 239, 0.10)";
                   else if (days !== null && days >= 0 && days <= 7) {
                     rowBg = "rgba(244, 114, 182, 0.10)";
@@ -978,7 +977,7 @@ const due = toNumber(c.totalDueAmount, 0);
                         <td style={tdStyle}>
                           {!hasRenewal
                             ? "⚪ Not Renewed"
-                            : status === "EXPIRED"
+                            : status === "expired"
                             ? "🔴 Expired"
                             : days !== null && days <= 3
                             ? "🟡 Expiring Soon"
@@ -997,7 +996,10 @@ const due = toNumber(c.totalDueAmount, 0);
                           >
                             <button
                               type="button"
-                              onClick={() => toggleDetails(c.id)}
+                              onClick={() => {
+                              if (!c.id) return;
+                              toggleDetails(c.id);
+                              }}
                               style={actionDetails}
                             >
                               {expandedId === c.id ? "Hide Details" : "Details"}
@@ -1053,6 +1055,7 @@ const due = toNumber(c.totalDueAmount, 0);
 <button
   type="button"
   onClick={async () => {
+    if (!c.id) return;
     const invoices = await getInvoices(c.id);
     console.log("Invoices:", invoices);
     alert(`Invoices loaded: ${invoices.length}`);
@@ -1119,7 +1122,7 @@ const due = toNumber(c.totalDueAmount, 0);
                                 <div style={detailValueStyle}>
                                   {!hasRenewal
                                     ? "-"
-                                    : status === "EXPIRED"
+                                    : status === "expired"
                                     ? `${Math.abs(days || 0)} days ago`
                                     : `${days} days remaining`}
                                 </div>

@@ -36,9 +36,9 @@ export function getDaysRemaining(expiryDate?: string) {
 export function getStatus(expiryDate?: string) {
   const days = getDaysRemaining(expiryDate);
 
-  if (days <= 0) return "Expired";
-  if (days <= 3) return "Expiring";
-  return "Active";
+  if (days <= 0) return "expired";
+  if (days <= 3) return "expiring";
+  return "active";
 }
 
 // 🔥 SMART RENEW DATE (IMPORTANT FIX)

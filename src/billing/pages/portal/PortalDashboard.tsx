@@ -1,3 +1,4 @@
+import { DB } from "../../lib/dbHelpers";
 import { getInvoices } from "../../lib/invoiceService";
 import { markInvoicePaid } from "../../lib/invoiceService";
 import { generateInvoicePDF } from "../../lib/pdfService";
@@ -8,6 +9,11 @@ import { getCustomerById } from "../../lib/billing-storage";
 import type { BillingCustomer } from "../../lib/billing-types";
 import { formatDateDisplay } from "../../lib/date-utils";
 import { supabase } from "../../lib/supabase";
+
+
+function showToast(type: "success" | "error", message: string) {
+  console.log(type.toUpperCase(), message);
+}
 
 function formatCurrency(value: unknown) {
   const num = Number(value ?? 0);
@@ -97,21 +103,48 @@ function DetailRow({
 export default function PortalDashboard() {
   
 const navigate = useNavigate();
-  const [customer, setCustomer] = useState<BillingCustomer | null>(null);
+const [customer, setCustomer] = useState<BillingCustomer | null>(null);
 const [invoices, setInvoices] = useState<any[]>([]);
+const [payments, setPayments] = useState<any[]>([]);
+const [customAmount, setCustomAmount] = useState("");
 
 useEffect(() => {
   if (!customer?.id) return;
 
   loadInvoices();
+  loadPayments();
+}, [customer]);
+
+useEffect(() => {
+  if (customer) {
+    setCustomAmount((customer.totalDueAmount || 0).toString());
+  }
 }, [customer]);
 
 async function loadInvoices() {
-  if (!customer) return;
+  if (!customer?.id) return;
 
   const data = await getInvoices(customer.id);
   setInvoices(data || []);
 }
+
+async function loadPayments() {
+  if (!customer?.id) return;
+
+  const { data, error } = await supabase
+    .from(DB.payments.table)
+    .select("*")
+    .eq(DB.payments.customerId, customer.id)
+    .order("payment_date", { ascending: false });
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  setPayments(data || []);
+}
+
   const [loading, setLoading] = useState(true);
 // ✅ CALCULATED VALUES (IMPORTANT)
 
@@ -189,35 +222,66 @@ const ringStroke =
 async function handlePayment() {
   if (!customer) return;
 
-const amount = Number(customer.totalDueAmount || 0);
+  let amount =
+    customAmount !== "" && Number(customAmount) > 0
+      ? Number(customAmount)
+      : Number(customer.totalDueAmount || 0);
+
   if (amount <= 0) {
-    alert("No due amount");
+    showToast("error", "Enter valid amount");
+    return;
+  }
+
+  if (Number(customer.totalDueAmount) >= 1000 && amount < 500) {
+    showToast("error", "Minimum payment is ₹500");
+    return;
+  }
+
+  if (amount > Number(customer.totalDueAmount)) {
+    showToast("error", "Amount exceeds due");
     return;
   }
 
   const options = {
-    key: "rzp_test_SYZNfTr1WFpvt1",
+    key: "rzp_live_SZj3GXorFtXOgG",
     amount: amount * 100,
     currency: "INR",
     name: "AJ Computers",
     description: "Internet Bill Payment",
 
     handler: async function () {
-      alert("Payment Successful");
-      const { error } = await supabase
-        .from("billing_customers")
-        .update({
-          total_due_amount: 0,
-          total_paid_amount:
-            Number(customer.totalPaidAmount || 0) + amount,
-          payment_date: new Date().toISOString(),
-        })
-        .eq("id", customer.id);
+      const newDue =
+        Number(customer.totalDueAmount || 0) - amount;
 
-      if (error) {
-        alert("Update failed");
+      const newPaid =
+        Number(customer.totalPaidAmount || 0) + amount;
+
+      if (newDue < 0) {
+        showToast("error", "Invalid payment amount");
         return;
       }
+
+      const { error } = await supabase
+        .from(DB.customers.table)
+        .update({
+          total_due_amount: newDue,
+          total_paid_amount: newPaid,
+        })
+        .eq(DB.customers.id, customer.id);
+
+      if (error) {
+        console.error(error);
+        showToast("error", "Update failed");
+        return;
+      }
+
+      await supabase.from(DB.payments.table).insert({
+        customer_id: customer.id,
+        amount: amount,
+        payment_date: new Date().toISOString(),
+      });
+
+      showToast("success", "Payment Successful");
 
       for (const inv of invoices) {
         if (inv.status === "unpaid") {
@@ -225,11 +289,15 @@ const amount = Number(customer.totalDueAmount || 0);
         }
       }
 
+      if (!customer.id) return;
+
       const updated = await getCustomerById(customer.id);
       setCustomer(updated);
-await loadInvoices();
-    }, // ✅ CLOSE handler properly
-  };   // ✅ CLOSE options object
+
+      await loadInvoices();
+      await loadPayments();
+    },
+  };
 
   const rzp = new (window as any).Razorpay(options);
   rzp.open();
@@ -831,20 +899,55 @@ if (loading) {
                 <div className="aj-portal-ring-caption">
                   Expiry Progress Ring
                   <br />
-{daysRemaining ? `${daysRemaining} days remaining` : "No expiry data"}
+{daysRemaining !== null
+  ? `${daysRemaining} days remaining`
+  : "No expiry data"}
                 </div>
               </div>
 <div className="aj-portal-actions">
 
-  {Number(customer.totalDueAmount) > 0 && (
-    <button
-      onClick={handlePayment}
-      className="aj-portal-btn aj-portal-btn-primary"
-      type="button"
-    >
-Pay ₹{Number(customer.totalDueAmount || 0)}
-    </button>
-  )}
+<div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+
+  <input
+    type="text"
+    inputMode="numeric"
+    value={customAmount}
+    onChange={(e) => {
+      const val = e.target.value.replace(/\D/g, "");
+      setCustomAmount(val);
+    }}
+    placeholder="Enter amount"
+    style={{
+      background: "rgba(255,255,255,0.05)",
+      border: "1px solid rgba(255,255,255,0.1)",
+      borderRadius: "12px",
+      padding: "10px 14px",
+      color: "#fff",
+      outline: "none",
+      width: "140px",
+    }}
+  />
+
+  <span style={{ fontSize: "12px", opacity: 0.7 }}>
+    Min ₹500 if due ≥ ₹1000
+  </span>
+
+</div>
+{Number(customer.totalDueAmount) > 0 && (
+  <button
+    onClick={handlePayment}
+    className="aj-portal-btn aj-portal-btn-primary"
+    type="button"
+  >
+    Pay ₹{
+      customAmount !== "" && Number(customAmount) > 0
+        ? Number(customAmount)
+        : Number(customer.totalDueAmount || 0)
+    }
+  </button>
+)}
+
+
 
   <Link
     to="/ajcomputers_billing/portal/change-password"
@@ -866,62 +969,34 @@ Pay ₹{Number(customer.totalDueAmount || 0)}
 
 <div className="aj-portal-glass aj-portal-section" style={{ marginTop: 20 }}>
   <div className="aj-portal-section-inner">
+    <p className="aj-portal-section-kicker">Payments</p>
+    <h2 className="aj-portal-section-title">Payment History</h2>
 
-    <p className="aj-portal-section-kicker">Billing</p>
-    <h2 className="aj-portal-section-title">Billing History</h2>
-
-    {invoices.length === 0 ? (
-      <p style={{ color: "#aaa" }}>No invoices yet</p>
-    ) : (
-      <table style={{ width: "100%", marginTop: 10, color: "#fff" }}>
-        <thead>
-          <tr style={{ borderBottom: "1px solid #444" }}>
-            <th>Date</th>
-            <th>Amount</th>
-            <th>Status</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {invoices.map((inv) => (
-            <tr key={inv.id}>
-              <td>{formatDateDisplay(inv.billing_date || inv.created_at)}</td>
-              <td>₹{inv.amount}</td>
-
-              <td
-                style={{
-                  color: inv.status === "paid" ? "#22c55e" : "#f59e0b",
-                }}
-              >
-                {inv.status}
-              </td>
-
-              <td>
-                <button
-                  onClick={() => generateInvoicePDF(inv, customer)}
-                  style={{
-                    padding: "6px 10px",
-                    borderRadius: 6,
-                    background: "#9333ea",
-                    color: "#fff",
-                    border: "none",
-                    cursor: "pointer",
-                  }}
-                >
-                  PDF
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    )}
-
-  </div>
+{payments.length === 0 ? (
+  <p style={{ color: "#aaa" }}>No payment history available</p>
+) : (
+  <table>
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Paid</th>
+        <th>Remaining</th>
+      </tr>
+    </thead>
+    <tbody>
+      {payments.map((p) => (
+        <tr key={p.id}>
+          <td>{new Date(p.payment_date).toLocaleString()}</td>
+          <td>₹{p.amount}</td>
+          <td>-</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+)}
 </div>
-
-          <section className="aj-portal-summary-grid">
+</div>
+            <section className="aj-portal-summary-grid">
             <InfoCard label="Current Status" value={statusText} tone={statusTone} />
             <InfoCard
               label="Current Due Amount"

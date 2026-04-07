@@ -252,8 +252,8 @@ export async function receivePayment(
   const customer = await getCustomerById(customerId);
   if (!customer) return;
 
-  const nextPaid = customer.totalPaidAmount + safeAmount;
-  const nextDue = Math.max(0, customer.currentDueAmount - safeAmount);
+  const nextPaid = (customer.totalPaidAmount || 0) + safeAmount
+  const nextDue = Math.max(0, (customer.currentDueAmount || 0) - safeAmount);
 
   await supabase
     .from("billing_customers")

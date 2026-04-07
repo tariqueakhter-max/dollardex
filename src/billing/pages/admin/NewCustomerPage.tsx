@@ -276,74 +276,78 @@ export default function NewCustomerPage() {
     return Math.max(0, due);
   }, [totalDueAmount, totalPaidAmount]);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-if (mobileNumber.length !== 10) {
+async function handleSubmit(e: React.FormEvent) {
+  e.preventDefault();
+
+  if (mobileNumber.length !== 10) {
     alert("Mobile number must be exactly 10 digits");
     return;
   }
 
-if (!planId) {
-  showToast("error", "Please select a plan");
-  return;
+  if (!planId) {
+    showToast("error", "Please select a plan");
+    return;
+  }
+
+  if (!customerName.trim()) {
+    showToast("error", "Customer name is required");
+    return;
+  }
+
+  if (!mobileNumber.trim()) {
+    showToast("error", "Mobile number is required");
+    return;
+  }
+
+  setSaving(true);
+
+  try {
+    const totalDue = toNumber(totalDueAmount, 0);
+    const totalPaid = toNumber(totalPaidAmount, 0);
+
+    const finalSerial =
+      String(serialNumber || "").trim() || (await getNextSerialNumber());
+
+    const payload: Omit<
+      BillingCustomer,
+      "id" | "createdAt" | "updatedAt"
+    > = {
+      customerName: customerName.trim(),
+      mobileNumber: mobileNumber.trim(),
+      address: address.trim(),
+      ispName: ispName.trim(),
+
+      planId: planId || null, // ✅ important
+
+      planName: planName.trim(),
+      planAmount: toNumber(planAmount, 0),
+      planValidity: toNumber(planValidity, 0),
+
+      installationDate: sanitizeDate(installationDate),
+      renewalDate: sanitizeDate(renewalDate),
+
+      status: "active", // ✅ default safe
+
+      portalPassword: portalPassword.trim() || mobileNumber.trim(),
+    };
+
+    console.log("FINAL PLAN ID:", payload.planId);
+
+    await addCustomer(payload); // ✅ THIS WAS MISSING
+
+    showToast("success", "Customer added successfully");
+
+    setTimeout(() => {
+      navigate("/ajcomputers_billing/admin/customers");
+    }, 700);
+  } catch (error) {
+    console.error(error);
+    showToast("error", getErrorMessage(error) || "Failed to add customer");
+  } finally {
+    setSaving(false);
+  }
 }
 
-    if (!customerName.trim()) {
-      showToast("error", "Customer name is required");
-      return;
-    }
-
-    if (!mobileNumber.trim()) {
-      showToast("error", "Mobile number is required");
-      return;
-    }
-
-    setSaving(true);
-
-    try {
-      const totalDue = toNumber(totalDueAmount, 0);
-      const totalPaid = toNumber(totalPaidAmount, 0);
-      const finalSerial =
-        String(serialNumber || "").trim() || (await getNextSerialNumber());
-const payload = {
-  customerName: customerName.trim(),
-  mobileNumber: mobileNumber.trim(),
-  address: address.trim(),
-  ispName: ispName.trim(),
-
-  planId: planId || "",
-  planName: planName.trim(),
-  planAmount: toNumber(planAmount, 0),
-  planValidity: toNumber(planValidity, 0),
-
-  installationDate: sanitizeDate(installationDate),
-  renewalDate: sanitizeDate(renewalDate),
-  paymentDate: sanitizeDate(paymentDate),
-
-  totalDueAmount: totalDue,
-  totalPaidAmount: totalPaid,
-  currentDueAmount: computedCurrentDue,
-
-  copyNumber: String(copyNumber || "").trim(),
-  serialNumber: finalSerial,
-  portalPassword: portalPassword.trim() || mobileNumber.trim(),
-};
-
-        
-console.log("FINAL PLAN ID:", planId);
-await addCustomer(payload);
-      showToast("success", "Customer added successfully");
-
-      setTimeout(() => {
-        navigate("/ajcomputers_billing/admin/customers");
-      }, 700);
-    } catch (error) {
-      console.error(error);
-      showToast("error", getErrorMessage(error) || "Failed to add customer");
-    } finally {
-      setSaving(false);
-    }
-  }
 
   return (
     <div>

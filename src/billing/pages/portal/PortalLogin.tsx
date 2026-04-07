@@ -22,34 +22,48 @@ export default function PortalLogin() {
     }, 3000);
   }
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
+async function handleLogin(e: React.FormEvent) {
+  e.preventDefault();
 
-    try {
-const customer = await authenticateCustomer(
-  loginId,
-  password
-);
-
-      if (!customer) {
-        showToast("error", "Invalid ID / Mobile / Password");
-        return;
-      }
-
-      loginPortal(customer.id);
-      showToast("success", "Login successful");
-
-      setTimeout(() => {
-        navigate("/ajcomputers_billing/portal/dashboard");
-      }, 700);
-    } catch (error) {
-      console.error(error);
-      showToast("error", "Login failed. Try again.");
-    } finally {
-      setLoading(false);
-    }
+  if (!loginId.trim()) {
+    showToast("error", "Enter Customer ID or Mobile Number");
+    return;
   }
+
+  if (!password.trim()) {
+    showToast("error", "Enter password");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const customer = await authenticateCustomer(loginId, password);
+
+    if (!customer) {
+      showToast("error", "Invalid ID / Mobile / Password");
+      return;
+    }
+
+    if (!customer.id) {
+      showToast("error", "Invalid customer record");
+      return;
+    }
+
+    loginPortal(customer.id);
+
+    showToast("success", "Login successful");
+
+    setTimeout(() => {
+      navigate("/ajcomputers_billing/portal/dashboard");
+    }, 700);
+  } catch (error) {
+    console.error(error);
+    showToast("error", "Login failed. Try again.");
+  } finally {
+    setLoading(false);
+  }
+}
 
   return (
     <>

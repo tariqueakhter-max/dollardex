@@ -39,7 +39,9 @@ export default function AdminDashboard() {
       getCustomers(),
     ]);
     setStats(s);
-    setCustomers(c || []);
+    setCustomers(
+    (c || []).filter((x): x is Required<typeof x> => !!x.id)
+);
     setLoading(false);
   }
 

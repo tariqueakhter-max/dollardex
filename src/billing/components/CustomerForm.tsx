@@ -139,7 +139,6 @@ export default function CustomerForm({ initialData, onSubmit }: Props) {
         currentDueAmount: computedCurrentDue,
         planAmount: Number(form.planAmount || 0),
         planValidity: Number(form.planValidity || 30),
-        plan_id: form.planId, // ✅ IMPORTANT FOR SUPABASE
       });
     } finally {
       setSaving(false);
