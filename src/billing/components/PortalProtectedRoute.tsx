@@ -5,7 +5,7 @@ export default function PortalProtectedRoute() {
   const isLoggedIn = isPortalLoggedIn();
 
   if (!isLoggedIn) {
-    return <Navigate to="/ajcomputers_billing/portal/login" replace />;
+    return <Navigate to="/customers" replace />;
   }
 
   return <Outlet />;

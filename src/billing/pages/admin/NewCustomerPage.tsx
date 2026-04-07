@@ -338,7 +338,7 @@ async function handleSubmit(e: React.FormEvent) {
     showToast("success", "Customer added successfully");
 
     setTimeout(() => {
-      navigate("/ajcomputers_billing/admin/customers");
+      navigate("/admin/customers");
     }, 700);
   } catch (error) {
     console.error(error);

@@ -5,7 +5,7 @@ export default function AdminProtectedRoute() {
   const username = getAdminUsername();
 
   if (!username) {
-    return <Navigate to="/ajcomputers_billing/admin" replace />;
+    return <Navigate to="/admin" replace />;
   }
 
   return <Outlet />;

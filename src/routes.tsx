@@ -2,9 +2,7 @@ import { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "./AppLayout";
 
-/** Keep Landing eager */
-import Landing from "./pages/Landing";
-<Route path="/" element={<Navigate to="/ajcomputers_billing" replace />} />
+/** Billing (MAIN APP) */
 import PlansPage from "./billing/pages/admin/PlansPage";
 import AdminChangePassword from "./billing/pages/admin/AdminChangePassword";
 import PortalChangePassword from "./billing/pages/portal/PortalChangePassword";
@@ -21,7 +19,7 @@ import PortalLogin from "./billing/pages/portal/PortalLogin";
 import PortalDashboard from "./billing/pages/portal/PortalDashboard";
 import ReminderSettings from "./billing/pages/admin/ReminderSettings";
 
-/** Lazy-loaded DollarDex pages */
+/** Optional: DollarDex (keep or remove later) */
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Referral = lazy(() => import("./pages/Referral"));
 const NetworkDashboard = lazy(() => import("./pages/NetworkDashboard"));
@@ -60,10 +58,39 @@ export default function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        {/* DollarDex routes only */}
-        <Route element={<AppLayout />}>
-          <Route path="/" element={<Landing />} />
 
+        {/* ================= MAIN BILLING APP ================= */}
+        <Route path="/" element={<BillingLayout />}>
+
+          {/* Home */}
+          <Route index element={<BillingHome />} />
+
+          {/* Admin Login */}
+          <Route path="admin" element={<AdminLogin />} />
+
+          {/* Protected Admin Routes */}
+          <Route element={<AdminProtectedRoute />}>
+            <Route path="admin/dashboard" element={<AdminDashboard />} />
+            <Route path="admin/customers" element={<CustomersPage />} />
+            <Route path="admin/customers/new" element={<NewCustomerPage />} />
+            <Route path="admin/customers/:id/edit" element={<EditCustomerPage />} />
+            <Route path="admin/change-password" element={<AdminChangePassword />} />
+            <Route path="admin/plans" element={<PlansPage />} />
+            <Route path="admin/reminders" element={<ReminderSettings />} />
+          </Route>
+
+          {/* Customer Login */}
+          <Route path="customers" element={<PortalLogin />} />
+
+<Route element={<PortalProtectedRoute />}>
+  <Route path="customers/dashboard" element={<PortalDashboard />} />
+  <Route path="customers/change-password" element={<PortalChangePassword />} />
+</Route>
+
+        </Route>
+
+        {/* ================= OPTIONAL: DOLLARDEX ================= */}
+        <Route element={<AppLayout />}>
           <Route path="/app">
             <Route index element={<Dashboard />} />
             <Route path="referral" element={<Referral />} />
@@ -74,36 +101,9 @@ export default function AppRoutes() {
           </Route>
         </Route>
 
-        {/* AJ Computers Billing routes */}
-        <Route path="/ajcomputers_billing" element={<BillingLayout />}>
-          <Route index element={<BillingHome />} />
-
-          {/* Admin login */}
-          <Route path="admin" element={<AdminLogin />} />
-
-          {/* Protected admin routes */}
-            <Route element={<AdminProtectedRoute />}>
-            <Route path="admin/dashboard" element={<AdminDashboard />} />
-            <Route path="admin/customers" element={<CustomersPage />} />
-            <Route path="admin/customers/new" element={<NewCustomerPage />} />
-            <Route path="admin/customers/:id/edit" element={<EditCustomerPage />} />
-            <Route path="admin/change-password" element={<AdminChangePassword />} />
-            <Route path="admin/plans" element={<PlansPage />} />
-	    <Route path="admin/reminders" element={<ReminderSettings />} />
-          </Route>
-
-          {/* Customer login */}
-          <Route path="portal/login" element={<PortalLogin />} />
-
-          {/* Protected customer routes */}
-          <Route element={<PortalProtectedRoute />}>
-            <Route path="portal/dashboard" element={<PortalDashboard />} />
-            <Route path="portal/change-password" element={<PortalChangePassword />} />
-          </Route>
-        </Route>
-
-        {/* Global 404 */}
+        {/* ================= 404 ================= */}
         <Route path="*" element={<NotFound />} />
+
       </Routes>
     </Suspense>
   );

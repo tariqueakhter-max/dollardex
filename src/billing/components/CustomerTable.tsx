@@ -1006,7 +1006,7 @@ const due = toNumber(c.totalDueAmount, 0);
                             </button>
 
                             <Link
-                              to={`/ajcomputers_billing/admin/customers/${c.id}/edit`}
+                              to={`/admin/customers/${c.id}/edit`}
                               style={actionEdit}
                             >
                               Edit

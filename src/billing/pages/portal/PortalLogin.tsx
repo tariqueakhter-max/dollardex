@@ -55,7 +55,7 @@ async function handleLogin(e: React.FormEvent) {
     showToast("success", "Login successful");
 
     setTimeout(() => {
-      navigate("/ajcomputers_billing/portal/dashboard");
+navigate("/customers/dashboard");
     }, 700);
   } catch (error) {
     console.error(error);
@@ -385,10 +385,10 @@ async function handleLogin(e: React.FormEvent) {
               </form>
 
               <div className="aj-links">
-                <Link to="/ajcomputers_billing" className="aj-link-btn">
+                <Link to="/" className="aj-link-btn">
                   Home
                 </Link>
-                <Link to="/ajcomputers_billing/admin" className="aj-link-btn">
+                <Link to="/admin" className="aj-link-btn">
                   Admin Login
                 </Link>
               </div>

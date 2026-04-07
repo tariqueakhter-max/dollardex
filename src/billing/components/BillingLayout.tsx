@@ -49,23 +49,23 @@ export default function BillingLayout() {
 
   const path = location.pathname;
 
-  const isAdminRoute = path.startsWith("/ajcomputers_billing/admin");
-  const isPortalRoute = path.startsWith("/ajcomputers_billing/portal");
+  const isAdminRoute = path.startsWith("/admin");
+  const isPortalRoute = path.startsWith("/portal");
 
   const showAdminNav =
-    isAdminRoute && path !== "/ajcomputers_billing/admin";
+    isAdminRoute && path !== "/admin";
 
   const showPortalNav =
-    isPortalRoute && path !== "/ajcomputers_billing/portal/login";
+    isPortalRoute && path !== "/customers";
 
   function logoutAdmin() {
     localStorage.removeItem("billing_admin_session");
-    navigate("/ajcomputers_billing/admin");
+    navigate("/admin");
   }
 
   function logoutPortal() {
     localStorage.removeItem("billing_customer_session");
-    navigate("/ajcomputers_billing/portal/login");
+    navigate("/customers");
   }
 
   return (
@@ -129,22 +129,22 @@ export default function BillingLayout() {
               }}
             >
               <NavBtn
-                active={path === "/ajcomputers_billing"}
-                onClick={() => navigate("/ajcomputers_billing")}
+                active={path === "/"}
+                onClick={() => navigate("/")}
               >
                 Home
               </NavBtn>
 
               <NavBtn
-                active={path === "/ajcomputers_billing/admin"}
-                onClick={() => navigate("/ajcomputers_billing/admin")}
+                active={path === "/admin"}
+                onClick={() => navigate("/admin")}
               >
                 Admin Login
               </NavBtn>
 
               <NavBtn
-                active={path === "/ajcomputers_billing/portal/login"}
-                onClick={() => navigate("/ajcomputers_billing/portal/login")}
+                active={path === "/customers"}
+                onClick={() => navigate("/customers")}
               >
                 Customer Login
               </NavBtn>
@@ -173,46 +173,46 @@ export default function BillingLayout() {
             }}
           >
             <NavBtn
-              active={path === "/ajcomputers_billing/admin/dashboard"}
-              onClick={() => navigate("/ajcomputers_billing/admin/dashboard")}
+              active={path === "/admin/dashboard"}
+              onClick={() => navigate("/admin/dashboard")}
             >
               Dashboard
             </NavBtn>
 
             <NavBtn
               active={
-                path === "/ajcomputers_billing/admin/customers" ||
-                path.includes("/ajcomputers_billing/admin/customers/")
+                path === "/admin/customers" ||
+                path.includes("/admin/customers/")
               }
-              onClick={() => navigate("/ajcomputers_billing/admin/customers")}
+              onClick={() => navigate("/admin/customers")}
             >
               Customers
             </NavBtn>
 
             <NavBtn
-              active={path === "/ajcomputers_billing/admin/customers/new"}
-              onClick={() => navigate("/ajcomputers_billing/admin/customers/new")}
+              active={path === "/admin/customers/new"}
+              onClick={() => navigate("/admin/customers/new")}
             >
               Add Customer
             </NavBtn>
 
             <NavBtn
-              active={path === "/ajcomputers_billing/admin/plans"}
-              onClick={() => navigate("/ajcomputers_billing/admin/plans")}
+              active={path === "/admin/plans"}
+              onClick={() => navigate("/admin/plans")}
             >
               Plans
             </NavBtn>
 
             <NavBtn
-              active={path === "/ajcomputers_billing/admin/reminders"}
-              onClick={() => navigate("/ajcomputers_billing/admin/reminders")}
+              active={path === "/admin/reminders"}
+              onClick={() => navigate("/admin/reminders")}
             >
               Reminders
             </NavBtn>
 
             <NavBtn
-              active={path === "/ajcomputers_billing/admin/change-password"}
-              onClick={() => navigate("/ajcomputers_billing/admin/change-password")}
+              active={path === "/admin/change-password"}
+              onClick={() => navigate("/admin/change-password")}
             >
               Change Password
             </NavBtn>
@@ -250,15 +250,15 @@ export default function BillingLayout() {
             }}
           >
             <NavBtn
-              active={path === "/ajcomputers_billing/portal/dashboard"}
-              onClick={() => navigate("/ajcomputers_billing/portal/dashboard")}
+              active={path === "/portal/dashboard"}
+              onClick={() => navigate("/portal/dashboard")}
             >
               Dashboard
             </NavBtn>
 
             <NavBtn
-              active={path === "/ajcomputers_billing/portal/change-password"}
-              onClick={() => navigate("/ajcomputers_billing/portal/change-password")}
+              active={path === "/portal/change-password"}
+              onClick={() => navigate("/portal/change-password")}
             >
               Change Password
             </NavBtn>

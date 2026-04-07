@@ -37,7 +37,7 @@ loginAdmin(username);
       showToast("success", "Login successful");
 
       setTimeout(() => {
-        navigate("/ajcomputers_billing/admin/dashboard");
+        navigate("/admin/dashboard");
       }, 700);
     } catch (error) {
       console.error(error);
@@ -426,12 +426,11 @@ justify-content: center;
 
               <div className="aj-admin-login-footer">
                 <div className="aj-admin-link-row">
-                  <Link to="/ajcomputers_billing" className="aj-admin-link-btn">
+                  <Link to="/" className="aj-admin-link-btn">
                     Back to Home
                   </Link>
 
-                  <Link
-                    to="/ajcomputers_billing/portal/login"
+                  <Link to="/customers"
                     className="aj-admin-link-btn"
                   >
                     Customer Login

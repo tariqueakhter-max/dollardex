@@ -389,7 +389,7 @@ export default function PortalChangePassword() {
 
                 <div className="aj-portal-pass-top-actions">
                   <Link
-                    to="/ajcomputers_billing/portal/dashboard"
+                    to="/portal/dashboard"
                     className="aj-portal-pass-link"
                   >
                     Back to Dashboard

@@ -249,7 +249,7 @@ console.log("Edit ID:", id);
         if (!customer) {
           showToast("error", "Customer not found");
           setTimeout(() => {
-            navigate("/ajcomputers_billing/admin/customers");
+            navigate("/admin/customers");
           }, 700);
           return;
         }
@@ -374,7 +374,7 @@ console.log("Edit ID:", id);
       showToast("success", "Customer updated successfully");
 
       setTimeout(() => {
-        navigate("/ajcomputers_billing/admin/customers");
+        navigate("/admin/customers");
       }, 700);
     } catch (error) {
       console.error(error);

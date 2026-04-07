@@ -215,7 +215,7 @@ const ringStroke =
 
  function handleLogout() {
   logoutPortal();
-  navigate("/ajcomputers_billing/portal/login");
+  navigate("/customers");
 }
 
 // ✅ Separate function (VERY IMPORTANT)
@@ -371,7 +371,7 @@ if (loading) {
               You are not logged in or your customer record could not be loaded.
             </p>
             <Link
-              to="/ajcomputers_billing/portal/login"
+              to="/customers"
               className="aj-portal-empty-link"
             >
               Back to Login
@@ -950,7 +950,7 @@ if (loading) {
 
 
   <Link
-    to="/ajcomputers_billing/portal/change-password"
+    to="/portal/change-password"
     className="aj-portal-link-btn aj-portal-btn-secondary"
   >
     Change Password
